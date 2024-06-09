@@ -3,6 +3,8 @@ Deck.java
 Max Wang
 holds all 52 cards
 ***/
+package Solitaire;
+
 import java.util.*;
 import java.awt.image.BufferedImage;
 import java.io.*;
@@ -14,7 +16,7 @@ public class Deck {
    private int cards;
    
    // directory for image folder
-   static File imageFolder = new File("Cards");
+   static File imageFolder = new File("Solitaire/Cards");
    
    // constructor for deck
    public Deck() {
@@ -36,7 +38,7 @@ public class Deck {
       if (imageFolder.isDirectory()) {
          for(File card : imageFolder.listFiles(IMAGE_FILTER)) {
             try {
-               deck.add(new Card(card.getName(), ImageIO.read(card), false));
+               deck.add(new Card(card.getName(), ImageIO.read(card), true));
             } catch (IOException e) {
             
             }
@@ -47,6 +49,21 @@ public class Deck {
    // shuffles all the cards in the deck
    public void shuffleDeck() {
       Collections.shuffle(deck);
+   }
+   
+   public Card swapPile() {
+      Card temp = null;
+      try {
+         temp = deck.get(deck.size() - 1);
+         deck.remove(deck.size() - 1);
+         return temp;
+      } catch (Exception e) {
+         return temp;
+      }
+   }
+   
+   public ArrayList getPileContent() {
+      return deck;
    }
    
    // toString
