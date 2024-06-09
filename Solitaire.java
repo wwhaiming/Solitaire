@@ -25,6 +25,7 @@ public class Solitaire {
    // creates the objects
    public static Deck deck = new Deck();
 
+
    // stock piles
    public static Pile stock = new Pile(); // stock
    public static Pile trash = new Pile(); // trash
@@ -45,6 +46,35 @@ public class Solitaire {
 
    public static JPanel panel = new JPanel(null);
 
+   // Flag to track if updates are needed
+   public static boolean updatesNeeded = false;
+
+   // Timer setup
+   public static javax.swing.Timer timer;
+   
+   // initilizes timer as soon as program is run
+   static {
+      int delay = 500;
+      timer = new javax.swing.Timer(delay, 
+         new ActionListener() {
+            public void actionPerformed(ActionEvent evt) {
+               if (updatesNeeded) {
+                  updateTableauPanels();
+                  updateTrashLabel();
+                  updateSuitPiles();
+                  panel.add(notifications);
+                  unhideUpdate();
+                  if (haveYouWonYet()) {
+                     if (again()) {
+                        frame.dispose();
+                        Game();
+                     }
+                  }
+               }
+            }
+         });
+   }
+
    public static void Game() {   
       // creates the frame
       frame.setSize(new Dimension(1600, 900));
@@ -59,14 +89,16 @@ public class Solitaire {
       }
       
       // sets up the notification stuff
-      notifications.setPreferredSize (new Dimension(300, 75));
+      notifications.setPreferredSize(new Dimension(300, 75));
       notifications.setForeground(Color.BLACK);
       notifications.setFont(new Font("Serif", Font.PLAIN, 40));
       notifications.setBounds(500, 10, 1000, 75);
    
       // sets the deck(in an order)
       deck.setDeck();
-   
+      
+         System.out.println(deck);
+      
       // shuffles the deck
       deck.shuffleDeck();
       
@@ -79,7 +111,7 @@ public class Solitaire {
       for (int i = 0; i <= 5; i++) piles[5].addCard(deck.swapPile());
       for (int i = 0; i <= 6; i++) piles[6].addCard(deck.swapPile());
       
-      for (int i = 0; i < 23; i++) stock.addCard(deck.swapPile());
+      for (int i = 0; i < 24; i++) stock.addCard(deck.swapPile());
    
       // sets the topmost cards to be shown as the game starts
       unhideUpdate();
@@ -115,32 +147,35 @@ public class Solitaire {
       } catch (Exception e) {
          e.printStackTrace();
       }
-   
-      // Start a timer to call unhideUpdate and updateMainPanel every delay ms
-      int delay = 500;
-      javax.swing.Timer timer = new javax.swing.Timer(delay, 
-         new ActionListener() {
-            public void actionPerformed(ActionEvent evt) {
-               unhideUpdate();
-               updateTableauPanels();
-               updateTrashLabel();
-               updateSuitPiles();
-               panel.add(notifications);
-               if (haveYouWonYet()) {
-                  if (again()) {
-                     frame.dispose();
-                     Game();
-                  }
-               }
-            }
-         });
-      timer.start();
      
-       
       frame.add(panel);
       frame.pack();
       frame.setResizable(resizable);
       frame.setVisible(true);
+   }
+
+   // Method to start the timer if not already started
+   public static void startTimer() {
+      if (!timer.isRunning()) {
+         timer.start();
+      }
+   }
+
+   // Method to stop the timer if no updates are needed
+   public static void stopTimer() {
+      if (timer.isRunning() && !updatesNeeded) {
+         timer.stop();
+      }
+   }
+
+   // Method to set updatesNeeded flag and control the timer
+   public static void setUpdatesNeeded(boolean needed) {
+      updatesNeeded = needed;
+      if (updatesNeeded) {
+         startTimer();
+      } else {
+         stopTimer();
+      }
    }
 
    // logic stuff //
@@ -181,6 +216,7 @@ public class Solitaire {
                destinationPile.addCard(tempPile.swapPile());
             }
             updateTableauPanels();
+            setUpdatesNeeded(true);
          }
       } else {
          notifications.setText("cannot move card here!!");
@@ -194,6 +230,7 @@ public class Solitaire {
          piles[destinationPile].addCard(trash.swapPile());
          updateTableauPanels();
          updateTrashLabel();
+         setUpdatesNeeded(true);
       } else {
          notifications.setText("cannot move card here!!");
       }
@@ -255,9 +292,12 @@ public class Solitaire {
                         }
                      }
                      notifications.setText("moved");
+                     unhideUpdate();
+                     setUpdatesNeeded(true);
                   } else {
                      notifications.setText("card does not meet requirements");
                   }                  
+                  selected.clear();
                }
             }
          });
@@ -323,15 +363,15 @@ public class Solitaire {
                }
             }
          });
-   
-      if (card.isSelected()) {
+      if (selected.contains(card)) {
          button.setBorder(BorderFactory.createStrokeBorder(new BasicStroke(5.0f)));
+      } else {
+         button.setBorder(BorderFactory.createStrokeBorder(new BasicStroke(1.0f)));
       }
       return button;
    }
 
-
-  // creates a button label specifically for stock
+   // creates a button label specifically for stock
    public static JPanel createStockLabel(int x, int y, Pile pile) {
       JPanel panel = new JPanel();
       LayoutManager overlay = new OverlayLayout(panel);
@@ -360,6 +400,7 @@ public class Solitaire {
                      trash.unhideTop();
                      updateTrashLabel();
                      updateStockLabel();
+                     setUpdatesNeeded(true);
                   }
                } else {
                   Pile temp = new Pile();
@@ -370,9 +411,17 @@ public class Solitaire {
                   stock.hideAll();
                   updateTrashLabel();
                   updateStockLabel();
+                  setUpdatesNeeded(true);
                }
             }
          });
+      if (selected.contains(trash.getTop())) {
+         button.setBorder(BorderFactory.createStrokeBorder(new BasicStroke(5.0f)));
+         notifications.setText("selected");
+      } else {
+         button.setBorder(BorderFactory.createStrokeBorder(new BasicStroke(1.0f)));
+      }
+      setUpdatesNeeded(true);
       panel.add(button);
       panel.setBounds(x, y, cardSizeX, cardSizeY);
       return panel;
@@ -402,6 +451,9 @@ public class Solitaire {
                            piles[pileNum].addCard(piles[altPile].swapPile(altIndex));
                         }
                      }
+                     notifications.setText("moved");
+                     unhideUpdate();
+                     setUpdatesNeeded(true);
                   } else {
                      notifications.setText("this card isnt a king!!");
                   }
@@ -451,10 +503,14 @@ public class Solitaire {
          });
    
       if (pile.getTop() != null && pile.getTop().isSelected()) {
+               System.out.println("trash is selected");
          panel.setBorder(BorderFactory.createStrokeBorder(new BasicStroke(5.0f)));
+               
       } else {
          panel.setBorder(BorderFactory.createStrokeBorder(new BasicStroke(1.0f)));
+         System.out.println("trash isnt selected");
       }
+      System.out.println("createTrashLabel was called");
       panel.add(button);
       panel.setBounds(x, y, cardSizeX, cardSizeY);
       return panel;
@@ -462,7 +518,7 @@ public class Solitaire {
 
    // Method to update the main panel
    public static void updateMainPanel() {
-      // Only remove and re-add stock and trash labels(for better efficency
+      // Only remove and re-add stock and trash labels (for better efficiency)
       updateStockLabel();
       updateTrashLabel();
       updateTableauPanels();
@@ -482,13 +538,13 @@ public class Solitaire {
             // Check if the component is an instance of JLayeredPane (which is used for tableau piles)
             if (component instanceof JLayeredPane) {
                JLayeredPane layeredPane = (JLayeredPane) component;
-               if (layeredPane.getBounds().x == 300 + tableauIntX * index && layeredPane.getBounds().y == tableauPosY) { // check if the layeredPanes bounds match the 
+               if (layeredPane.getBounds().x == 300 + tableauIntX * index && layeredPane.getBounds().y == tableauPosY) { // check if the layeredPane's bounds match the 
                                                                                                                         // position of the tableau pile at 'index'
                   panel.remove(layeredPane);
                   panel.add(createTableauPilePanel(piles[index], 300 + tableauIntX * index, tableauPosY));
                }               
             }
-            
+         
             if (component instanceof JPanel) {
                JPanel underPanel = (JPanel) component;
                if (underPanel.getBounds().x == 300 + tableauIntX * index && underPanel.getBounds().y == tableauPosY) {
@@ -496,11 +552,9 @@ public class Solitaire {
                   panel.add(createButtonsUnder(300 + tableauIntX * i, tableauPosY, i));
                }               
             }
-            
-            // System.out.println(component);
-            
          }
       }
+      setUpdatesNeeded(false); // No updates are needed once tableau panels are updated
    }
    
    // updates the trash label when stock is pressed
@@ -518,6 +572,7 @@ public class Solitaire {
    
       panel.revalidate();
       panel.repaint();
+      setUpdatesNeeded(false); // No updates are needed once trash label is updated
    }
    
    // Update the stock label when the stock pile changes
@@ -534,6 +589,7 @@ public class Solitaire {
       }
       panel.revalidate();
       panel.repaint();
+      setUpdatesNeeded(false); // No updates are needed once stock label is updated
    }
    
    // pretty much same thing as tableau update function but with suits referenced
@@ -559,6 +615,7 @@ public class Solitaire {
       }
       panel.revalidate();
       panel.repaint();
+      setUpdatesNeeded(false); // No updates are needed once suit piles are updated
    }
    
    // updates what cards are selected
@@ -587,7 +644,7 @@ public class Solitaire {
                   }
                }
             }
-            
+         
             Card topTrashCard = trash.getTop();
             if (topTrashCard != null) {
                if (selectedCard == topTrashCard) {
@@ -596,21 +653,24 @@ public class Solitaire {
                } else {
                   trash.deselect(trash.getPileContent().size() - 1);
                }
+               updateTrashLabel();
             }
          } else {
-            System.out.println("No cards selected");
+            trash.deselect(trash.getPileContent().size() - 1);
+            updateTrashLabel();
          }
+         setUpdatesNeeded(false); // No updates are needed once selection is updated
       } catch (Exception e) {
          e.printStackTrace();
       }
    }
 
-   
    // Unhides card if it is on top of the pile
    public static void unhideUpdate() {
       for (int i = 0; i < 7; i++) {
          piles[i].unhideTop();
       }
+      setUpdatesNeeded(false); // No updates are needed once unhide update is done
    }
    
    // function that checks for wins
@@ -627,6 +687,7 @@ public class Solitaire {
       return response == JOptionPane.YES_OPTION;
    }
    
+   // function for handling card movement
    public static void handleCardMove() {
       if (selected.size() == 2) {
          Card card1 = selected.get(0);
@@ -646,6 +707,8 @@ public class Solitaire {
                   selected.clear();
                   updateMainPanel();
                   notifications.setText("moved");
+                  unhideUpdate();
+                  setUpdatesNeeded(true);
                } else {
                   notifications.setText("you can't move that card there");
                   selected.clear();
@@ -657,7 +720,6 @@ public class Solitaire {
          }
       }
    }
-
 
    public static void main(String[] args) {
       try {
